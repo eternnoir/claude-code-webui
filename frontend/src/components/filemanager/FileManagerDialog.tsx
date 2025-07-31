@@ -15,7 +15,7 @@ import type {
   FileInfo,
   FilesListResponse,
   FileContentResponse,
-} from "../../../../shared/types";
+} from "@shared/types";
 
 interface FileManagerDialogProps {
   isOpen: boolean;

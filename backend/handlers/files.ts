@@ -287,7 +287,7 @@ export async function handleFileContent(
       // Images or small binary files (< 1MB)
       // Read as binary and encode to base64
       const buffer = await runtime.readBinaryFile(fullPath);
-      content = Buffer.from(buffer).toString("base64");
+      content = btoa(String.fromCharCode(...new Uint8Array(buffer)));
       encoding = "base64";
     } else {
       // Large binary files - don't read content
