@@ -18,6 +18,11 @@ import { handleConversationRequest } from "./handlers/conversations.ts";
 import { handleChatRequest } from "./handlers/chat.ts";
 import { handleAbortRequest } from "./handlers/abort.ts";
 import { handleUpload } from "./handlers/upload.ts";
+import {
+  handleFilesList,
+  handleFileContent,
+  handleFileDownload,
+} from "./handlers/files.ts";
 
 export interface AppConfig {
   debugMode: boolean;
@@ -72,6 +77,21 @@ export function createApp(
   app.post("/api/chat", (c) => handleChatRequest(c, requestAbortControllers));
 
   app.post("/api/upload", (c) => handleUpload(c, runtime));
+
+  // File manager routes
+  app.get("/api/projects/:encodedProjectName/files", (c) =>
+    handleFilesList(c, runtime),
+  );
+
+  // Note: more specific routes must come before catch-all routes
+  // Download route - must check URL pattern to distinguish from content route
+  app.get("/api/projects/:encodedProjectName/files/:path{.+}", (c) => {
+    const path = c.req.path;
+    if (path.endsWith("/download")) {
+      return handleFileDownload(c, runtime);
+    }
+    return handleFileContent(c, runtime);
+  });
 
   // Static file serving with SPA fallback
   // Serve static assets (CSS, JS, images, etc.)

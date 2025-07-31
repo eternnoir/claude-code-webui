@@ -57,3 +57,25 @@ export interface UploadResponse {
   filePath?: string;
   error?: string;
 }
+
+// File manager types
+export interface FileInfo {
+  name: string;
+  path: string;
+  type: "file" | "directory";
+  size?: number;
+  modifiedTime?: string;
+  extension?: string;
+}
+
+export interface FilesListResponse {
+  files: FileInfo[];
+  currentPath: string;
+}
+
+export interface FileContentResponse {
+  content: string;
+  type: string; // MIME type
+  encoding: "utf-8" | "base64";
+  size: number;
+}

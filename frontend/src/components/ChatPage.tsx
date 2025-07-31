@@ -10,9 +10,11 @@ import { useAbortController } from "../hooks/chat/useAbortController";
 import { useAutoHistoryLoader } from "../hooks/useHistoryLoader";
 import { ThemeToggle } from "./chat/ThemeToggle";
 import { HistoryButton } from "./chat/HistoryButton";
+import { FileManagerButton } from "./chat/FileManagerButton";
 import { ChatInput } from "./chat/ChatInput";
 import { ChatMessages } from "./chat/ChatMessages";
 import { HistoryView } from "./HistoryView";
+import { FileManagerDialog } from "./filemanager/FileManagerDialog";
 import { getChatUrl, getProjectsUrl } from "../config/api";
 import { KEYBOARD_SHORTCUTS } from "../utils/constants";
 import { normalizeWindowsPath } from "../utils/pathUtils";
@@ -26,6 +28,7 @@ export function ChatPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [projects, setProjects] = useState<ProjectInfo[]>([]);
+  const [isFileManagerOpen, setIsFileManagerOpen] = useState(false);
 
   // Extract and normalize working directory from URL
   const workingDirectory = (() => {
@@ -135,64 +138,67 @@ export function ChatPage() {
       if (!content && attachedFiles.length === 0) return;
       if (isLoading) return;
 
-      // Handle file uploads
-      let processedFiles: ProcessedFile[] = [];
-      if (attachedFiles.length > 0) {
-        // Upload any files that haven't been uploaded yet
-        for (const file of attachedFiles) {
-          if (file._tempFile && !file.filePath) {
-            // This file needs to be uploaded
-            const sessionToUse = currentSessionId || "temp-" + Date.now();
-            const uploadResult = await uploadFile(
-              file._tempFile,
-              sessionToUse,
-              workingDirectory,
-            );
-
-            if (uploadResult.success && uploadResult.filePath) {
-              processedFiles.push({
-                ...file,
-                filePath: uploadResult.filePath,
-                _tempFile: undefined,
-              });
-            } else {
-              processedFiles.push({
-                ...file,
-                error: uploadResult.error || "Upload failed",
-                _tempFile: undefined,
-              });
-            }
-          } else {
-            // File already uploaded or has error
-            processedFiles.push(file);
-          }
-        }
-
-        // Append file information to message
-        const fileContents = processedFiles.map(formatFileForMessage).join("");
-        content = content + fileContents;
-
-        // Clear attached files after sending
-        setAttachedFiles([]);
-      }
-
+      // Generate request ID and start request immediately to disable button
       const requestId = generateRequestId();
-
-      // Only add user message to chat if not hidden
-      if (!hideUserMessage) {
-        const userMessage: ChatMessage = {
-          type: "chat",
-          role: "user",
-          content: content,
-          timestamp: Date.now(),
-        };
-        addMessage(userMessage);
-      }
-
-      if (!messageContent) clearInput();
       startRequest();
 
       try {
+        // Handle file uploads
+        const processedFiles: ProcessedFile[] = [];
+        if (attachedFiles.length > 0) {
+          // Upload any files that haven't been uploaded yet
+          for (const file of attachedFiles) {
+            if (file._tempFile && !file.filePath) {
+              // This file needs to be uploaded
+              const sessionToUse = currentSessionId || "temp-" + Date.now();
+              const uploadResult = await uploadFile(
+                file._tempFile,
+                sessionToUse,
+                workingDirectory,
+              );
+
+              if (uploadResult.success && uploadResult.filePath) {
+                processedFiles.push({
+                  ...file,
+                  filePath: uploadResult.filePath,
+                  _tempFile: undefined,
+                });
+              } else {
+                processedFiles.push({
+                  ...file,
+                  error: uploadResult.error || "Upload failed",
+                  _tempFile: undefined,
+                });
+              }
+            } else {
+              // File already uploaded or has error
+              processedFiles.push(file);
+            }
+          }
+
+          // Append file information to message
+          const fileContents = processedFiles
+            .map(formatFileForMessage)
+            .join("");
+          content = content + fileContents;
+
+          // Clear attached files after sending
+          setAttachedFiles([]);
+        }
+
+        // Only add user message to chat if not hidden
+        if (!hideUserMessage) {
+          const userMessage: ChatMessage = {
+            type: "chat",
+            role: "user",
+            content: content,
+            timestamp: Date.now(),
+          };
+          addMessage(userMessage);
+        }
+
+        if (!messageContent) clearInput();
+
         const response = await fetch(getChatUrl(), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -481,6 +487,9 @@ export function ChatPage() {
             </div>
           </div>
           <div className="flex items-center gap-3">
+            {!isHistoryView && workingDirectory && (
+              <FileManagerButton onClick={() => setIsFileManagerOpen(true)} />
+            )}
             {!isHistoryView && <HistoryButton onClick={handleHistoryClick} />}
             <ThemeToggle theme={theme} onToggle={toggleTheme} />
           </div>
@@ -563,6 +572,15 @@ export function ChatPage() {
       </div>
 
       {/* Permission interface - Now handled inline by ChatInput component */}
+
+      {/* File Manager Dialog */}
+      {workingDirectory && getEncodedName() && (
+        <FileManagerDialog
+          isOpen={isFileManagerOpen}
+          onClose={() => setIsFileManagerOpen(false)}
+          projectEncodedName={getEncodedName()!}
+        />
+      )}
     </div>
   );
 }
