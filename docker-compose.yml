@@ -1,0 +1,12 @@
+services:
+  claude-code-webui:
+    build: .
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./data/claude:/root/.claude
+      - ./data:/data
+    environment:
+      - PORT=8080
+      - ANTHROPIC_BASE_URL=${ANTHROPIC_BASE_URL:-}
+    restart: unless-stopped

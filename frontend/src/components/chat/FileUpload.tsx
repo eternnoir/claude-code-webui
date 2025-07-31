@@ -1,9 +1,8 @@
-import { useRef, useState } from "react";
-import { Paperclip, X, FileText, Image, File } from "lucide-react";
+import { useRef } from "react";
+import { Paperclip } from "lucide-react";
 import {
   validateFile,
   createProcessedFile,
-  formatFileSize,
   type ProcessedFile,
 } from "../../utils/fileUtils";
 import { uploadFile } from "../../utils/uploadApi";

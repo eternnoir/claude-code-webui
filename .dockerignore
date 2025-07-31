@@ -1,0 +1,48 @@
+# Node modules
+node_modules/
+*/node_modules/
+
+# Build outputs
+frontend/dist/
+backend/dist/
+backend/claude-code-webui
+
+# Git
+.git/
+.gitignore
+
+# IDE
+.vscode/
+.idea/
+
+# Environment files
+.env
+.env.*
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Test coverage
+coverage/
+*.lcov
+
+# Temporary files
+*.tmp
+*.temp
+
+# Docker files
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# Documentation
+README.md
+CHANGELOG.md
+
+# Data directory (will be mounted)
+data/

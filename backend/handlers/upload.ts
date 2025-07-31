@@ -3,7 +3,7 @@
  * Saves uploaded files to a temporary directory in the working directory
  */
 
-import type { Context } from "@hono/hono";
+import type { Context } from "hono";
 import type { Runtime } from "../runtime/types.ts";
 import type { UploadResponse } from "../../shared/types.ts";
 
