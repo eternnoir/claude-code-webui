@@ -119,6 +119,18 @@ export class NodeRuntime implements Runtime {
     }
   }
 
+  async writeBinaryFile(path: string, content: Uint8Array): Promise<void> {
+    await fs.writeFile(path, Buffer.from(content));
+  }
+
+  async mkdir(path: string): Promise<void> {
+    await fs.mkdir(path, { recursive: true });
+  }
+
+  getCurrentWorkingDirectory(): string {
+    return process.cwd();
+  }
+
   exit(code: number): never {
     process.exit(code);
   }

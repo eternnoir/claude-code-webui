@@ -17,6 +17,7 @@ import { handleHistoriesRequest } from "./handlers/histories.ts";
 import { handleConversationRequest } from "./handlers/conversations.ts";
 import { handleChatRequest } from "./handlers/chat.ts";
 import { handleAbortRequest } from "./handlers/abort.ts";
+import { handleUpload } from "./handlers/upload.ts";
 
 export interface AppConfig {
   debugMode: boolean;
@@ -69,6 +70,8 @@ export function createApp(
   );
 
   app.post("/api/chat", (c) => handleChatRequest(c, requestAbortControllers));
+
+  app.post("/api/upload", (c) => handleUpload(c, runtime));
 
   // Static file serving with SPA fallback
   // Serve static assets (CSS, JS, images, etc.)

@@ -29,6 +29,9 @@ const mockRuntime: Runtime = {
       mtime: null,
     }),
   writeTextFile: () => Promise.resolve(),
+  writeBinaryFile: () => Promise.resolve(),
+  mkdir: () => Promise.resolve(),
+  getCurrentWorkingDirectory: () => "/mock/cwd",
   withTempDir: async <T>(
     callback: (tempDir: string) => Promise<T>,
   ): Promise<T> => {

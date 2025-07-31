@@ -51,3 +51,9 @@ export interface ConversationHistory {
   };
 }
 
+// File upload types
+export interface UploadResponse {
+  success: boolean;
+  filePath?: string;
+  error?: string;
+}

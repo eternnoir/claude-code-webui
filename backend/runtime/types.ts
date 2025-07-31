@@ -42,9 +42,12 @@ export interface Runtime {
     content: string,
     options?: { mode?: number },
   ): Promise<void>;
+  writeBinaryFile(path: string, content: Uint8Array): Promise<void>;
   exists(path: string): Promise<boolean>;
   stat(path: string): Promise<FileStats>;
   readDir(path: string): AsyncIterable<DirectoryEntry>;
+  mkdir(path: string): Promise<void>;
+  getCurrentWorkingDirectory(): string;
 
   // Temporary directory operations
   withTempDir<T>(callback: (tempDir: string) => Promise<T>): Promise<T>;

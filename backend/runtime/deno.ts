@@ -114,6 +114,18 @@ export class DenoRuntime implements Runtime {
     }
   }
 
+  async writeBinaryFile(path: string, content: Uint8Array): Promise<void> {
+    await Deno.writeFile(path, content);
+  }
+
+  async mkdir(path: string): Promise<void> {
+    await Deno.mkdir(path, { recursive: true });
+  }
+
+  getCurrentWorkingDirectory(): string {
+    return Deno.cwd();
+  }
+
   exit(code: number): never {
     Deno.exit(code);
   }

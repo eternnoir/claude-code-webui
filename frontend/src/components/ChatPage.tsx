@@ -17,6 +17,9 @@ import { getChatUrl, getProjectsUrl } from "../config/api";
 import { KEYBOARD_SHORTCUTS } from "../utils/constants";
 import { normalizeWindowsPath } from "../utils/pathUtils";
 import type { StreamingContext } from "../hooks/streaming/useMessageProcessor";
+import type { ProcessedFile } from "../utils/fileUtils";
+import { formatFileForMessage } from "../utils/fileUtils";
+import { uploadFile } from "../utils/uploadApi";
 
 export function ChatPage() {
   const location = useLocation();
@@ -112,6 +115,9 @@ export function ChatPage() {
     isPermissionMode,
   } = usePermissions();
 
+  // File upload state
+  const [attachedFiles, setAttachedFiles] = useState<ProcessedFile[]>([]);
+
   const handlePermissionError = useCallback(
     (toolName: string, patterns: string[], toolUseId: string) => {
       showPermissionRequest(toolName, patterns, toolUseId);
@@ -125,8 +131,50 @@ export function ChatPage() {
       tools?: string[],
       hideUserMessage = false,
     ) => {
-      const content = messageContent || input.trim();
-      if (!content || isLoading) return;
+      let content = messageContent || input.trim();
+      if (!content && attachedFiles.length === 0) return;
+      if (isLoading) return;
+
+      // Handle file uploads
+      let processedFiles: ProcessedFile[] = [];
+      if (attachedFiles.length > 0) {
+        // Upload any files that haven't been uploaded yet
+        for (const file of attachedFiles) {
+          if (file._tempFile && !file.filePath) {
+            // This file needs to be uploaded
+            const sessionToUse = currentSessionId || "temp-" + Date.now();
+            const uploadResult = await uploadFile(
+              file._tempFile,
+              sessionToUse,
+              workingDirectory,
+            );
+
+            if (uploadResult.success && uploadResult.filePath) {
+              processedFiles.push({
+                ...file,
+                filePath: uploadResult.filePath,
+                _tempFile: undefined,
+              });
+            } else {
+              processedFiles.push({
+                ...file,
+                error: uploadResult.error || "Upload failed",
+                _tempFile: undefined,
+              });
+            }
+          } else {
+            // File already uploaded or has error
+            processedFiles.push(file);
+          }
+        }
+
+        // Append file information to message
+        const fileContents = processedFiles.map(formatFileForMessage).join("");
+        content = content + fileContents;
+
+        // Clear attached files after sending
+        setAttachedFiles([]);
+      }
 
       const requestId = generateRequestId();
 
@@ -235,6 +283,7 @@ export function ChatPage() {
       processStreamLine,
       handlePermissionError,
       createAbortHandler,
+      attachedFiles,
     ],
   );
 
@@ -502,6 +551,12 @@ export function ChatPage() {
               onAbort={handleAbort}
               showPermissions={isPermissionMode}
               permissionData={permissionData}
+              onFilesChange={(newFiles) =>
+                setAttachedFiles((prev) => [...prev, ...newFiles])
+              }
+              files={attachedFiles}
+              sessionId={currentSessionId}
+              workingDirectory={workingDirectory}
             />
           </>
         )}

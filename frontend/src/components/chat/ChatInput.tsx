@@ -4,6 +4,10 @@ import { UI_CONSTANTS, KEYBOARD_SHORTCUTS } from "../../utils/constants";
 import { useEnterBehavior } from "../../hooks/useEnterBehavior";
 import { EnterModeMenu } from "./EnterModeMenu";
 import { PermissionInputPanel } from "./PermissionInputPanel";
+import { FileUpload } from "./FileUpload";
+import type { ProcessedFile } from "../../utils/fileUtils";
+import { formatFileSize } from "../../utils/fileUtils";
+import { X, FileText, Image, File } from "lucide-react";
 
 interface PermissionData {
   patterns: string[];
@@ -28,6 +32,11 @@ interface ChatInputProps {
   // Permission mode props
   showPermissions?: boolean;
   permissionData?: PermissionData;
+  // File upload props
+  onFilesChange?: (files: ProcessedFile[]) => void;
+  files?: ProcessedFile[];
+  sessionId?: string | null;
+  workingDirectory?: string;
 }
 
 export function ChatInput({
@@ -39,10 +48,69 @@ export function ChatInput({
   onAbort,
   showPermissions = false,
   permissionData,
+  onFilesChange,
+  files = [],
+  sessionId,
+  workingDirectory,
 }: ChatInputProps) {
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const [isComposing, setIsComposing] = useState(false);
   const { enterBehavior } = useEnterBehavior();
+
+  const removeFile = (index: number) => {
+    if (onFilesChange) {
+      const updatedFiles = files.filter((_, i) => i !== index);
+      onFilesChange(updatedFiles);
+    }
+  };
+
+  const clearAllFiles = () => {
+    if (onFilesChange) {
+      onFilesChange([]);
+    }
+  };
+
+  const getFileIcon = (file: ProcessedFile) => {
+    if (file.error) {
+      return <X className="w-4 h-4" />;
+    }
+    const ext = file.filename.toLowerCase().split(".").pop() || "";
+    if (["jpg", "jpeg", "png", "gif", "webp", "svg"].includes(ext)) {
+      return <Image className="w-4 h-4" />;
+    }
+    if (
+      [
+        "txt",
+        "md",
+        "js",
+        "ts",
+        "jsx",
+        "tsx",
+        "py",
+        "java",
+        "cpp",
+        "c",
+        "h",
+        "json",
+        "xml",
+        "yaml",
+        "yml",
+      ].includes(ext)
+    ) {
+      return <FileText className="w-4 h-4" />;
+    }
+    return <File className="w-4 h-4" />;
+  };
+
+  const getFileColor = (file: ProcessedFile) => {
+    if (file.error) {
+      return "text-red-600 dark:text-red-400";
+    }
+    if (file.filePath) {
+      return "text-green-600 dark:text-green-400";
+    }
+    return "text-gray-600 dark:text-gray-400";
+  };
 
   // Focus input when not loading and not in permission mode
   useEffect(() => {
@@ -142,40 +210,94 @@ export function ChatInput({
 
   return (
     <div className="flex-shrink-0">
-      <form onSubmit={handleSubmit} className="relative">
-        <textarea
-          ref={inputRef}
-          value={input}
-          onChange={(e) => onInputChange(e.target.value)}
-          onKeyDown={handleKeyDown}
-          onCompositionStart={handleCompositionStart}
-          onCompositionEnd={handleCompositionEnd}
-          placeholder={
-            isLoading && currentRequestId ? "Processing..." : "Type message..."
-          }
-          rows={1}
-          className={`w-full px-4 py-3 pr-40 bg-white/80 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 backdrop-blur-sm shadow-sm text-slate-800 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 resize-none overflow-hidden min-h-[48px] max-h-[${UI_CONSTANTS.TEXTAREA_MAX_HEIGHT}px]`}
-          disabled={isLoading}
-        />
-        <div className="absolute right-2 bottom-3 flex gap-2">
-          {isLoading && currentRequestId && (
+      {/* Files display area */}
+      {files.length > 0 && (
+        <div className="mb-2 bg-gray-50 dark:bg-gray-900 rounded-lg p-3">
+          <div className="flex justify-between items-center mb-2">
+            <span className="text-xs text-gray-500 dark:text-gray-400">
+              {files.length} file{files.length > 1 ? "s" : ""} attached
+            </span>
             <button
+              onClick={clearAllFiles}
+              className="text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
               type="button"
-              onClick={onAbort}
-              className="p-2 bg-red-100 hover:bg-red-200 dark:bg-red-900/20 dark:hover:bg-red-900/30 text-red-600 dark:text-red-400 rounded-lg transition-all duration-200 shadow-sm hover:shadow-md"
-              title="Stop (ESC)"
             >
-              <StopIcon className="w-4 h-4" />
+              Clear all
             </button>
+          </div>
+          <div className="space-y-1">
+            {files.map((file, index) => (
+              <div
+                key={index}
+                className="flex items-center gap-2 p-2 bg-white dark:bg-gray-800 rounded"
+              >
+                <span className={getFileColor(file)}>{getFileIcon(file)}</span>
+                <span className="text-sm flex-1 truncate">{file.filename}</span>
+                <span className="text-xs text-gray-500 dark:text-gray-400">
+                  {formatFileSize(file.size)}
+                </span>
+                <button
+                  onClick={() => removeFile(index)}
+                  className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded"
+                  type="button"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Input area */}
+      <form onSubmit={handleSubmit} className="relative">
+        <div className="relative">
+          <textarea
+            ref={inputRef}
+            value={input}
+            onChange={(e) => onInputChange(e.target.value)}
+            onKeyDown={handleKeyDown}
+            onCompositionStart={handleCompositionStart}
+            onCompositionEnd={handleCompositionEnd}
+            placeholder={
+              isLoading && currentRequestId
+                ? "Processing..."
+                : "Type message..."
+            }
+            rows={1}
+            className={`w-full px-4 py-3 pl-12 pr-40 bg-white/80 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 backdrop-blur-sm shadow-sm text-slate-800 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 resize-none overflow-hidden min-h-[48px] max-h-[${UI_CONSTANTS.TEXTAREA_MAX_HEIGHT}px]`}
+            disabled={isLoading}
+          />
+          {onFilesChange && (
+            <div className="absolute left-2 bottom-3 z-10">
+              <FileUpload
+                onFilesProcessed={onFilesChange}
+                disabled={isLoading}
+                sessionId={sessionId || null}
+                workingDirectory={workingDirectory}
+              />
+            </div>
           )}
-          <EnterModeMenu />
-          <button
-            type="submit"
-            disabled={!input.trim() || isLoading}
-            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-400 text-white rounded-lg font-medium transition-all duration-200 shadow-sm hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50 text-sm"
-          >
-            {isLoading ? "..." : "Send"}
-          </button>
+          <div className="absolute right-2 bottom-3 flex gap-2">
+            {isLoading && currentRequestId && (
+              <button
+                type="button"
+                onClick={onAbort}
+                className="p-2 bg-red-100 hover:bg-red-200 dark:bg-red-900/20 dark:hover:bg-red-900/30 text-red-600 dark:text-red-400 rounded-lg transition-all duration-200 shadow-sm hover:shadow-md"
+                title="Stop (ESC)"
+              >
+                <StopIcon className="w-4 h-4" />
+              </button>
+            )}
+            <EnterModeMenu />
+            <button
+              type="submit"
+              disabled={!input.trim() || isLoading}
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-400 text-white rounded-lg font-medium transition-all duration-200 shadow-sm hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50 text-sm"
+            >
+              {isLoading ? "..." : "Send"}
+            </button>
+          </div>
         </div>
       </form>
     </div>
