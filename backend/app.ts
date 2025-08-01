@@ -23,6 +23,7 @@ import {
   handleFileContent,
   handleFileDownload,
 } from "./handlers/files.ts";
+import { logger } from "./utils/logger.ts";
 
 export interface AppConfig {
   debugMode: boolean;
@@ -114,7 +115,7 @@ export function createApp(
       const indexFile = await runtime.readBinaryFile(indexPath);
       return c.html(new TextDecoder().decode(indexFile));
     } catch (error) {
-      console.error("Error serving index.html:", error);
+      logger.app.error("Error serving index.html: {error}", { error });
       return c.text("Internal server error", 500);
     }
   });
